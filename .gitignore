@@ -1,0 +1,21 @@
+# ignore node_modules directory
+node_modules/
+
+# ignore environment files
+.env
+
+# ignore build output directory
+build/
+
+# ignore coverage output directory
+coverage/
+
+# ignore package lock file
+package-lock.json
+
+# ignore IDE-specific files
+.vscode/
+.idea/
+
+# ignore contract build artifacts
+/build/contracts/
