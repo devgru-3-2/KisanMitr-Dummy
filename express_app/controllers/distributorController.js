@@ -1,17 +1,23 @@
 const Distributor = require('../models/distributorSchema');
 const User = require('../models/userSchema');
 const Farmer = require('../models/farmerSchema');
+const Product = require('../models/productSchema');
 const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
+const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-exports.createDistributor = async (req, res) => {
+exports.createAndVerifyDistributor = async (req, res) => {
   try {
-    const { name, phone, address } = req.body;
+    const { name, phone, address, otp } = req.body;
 
-    // send OTP to distributor
+    // Send OTP
     await sendOTP(req, res);
 
-    // store distributor data in MongoDB
+
+    // Verify OTP
+    await verifyOTP(req, res);
+
+    // Create new distributor in MongoDB
     const newDistributor = new Distributor({
       name,
       phone,
@@ -20,7 +26,7 @@ exports.createDistributor = async (req, res) => {
 
     const savedDistributor = await newDistributor.save();
 
-    // store distributor data in blockchain
+    // Add distributor data to blockchain
     const data = { 
       name: savedDistributor.name, 
       phone: savedDistributor.phone, 
@@ -28,55 +34,22 @@ exports.createDistributor = async (req, res) => {
     };
     const txid = await addToBlockchain('createDistributor', data);
 
-    res.status(200).json({ 
-      message: 'Distributor created successfully', 
-      txid: txid
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error creating distributor' });
-  }
-};
-
-exports.verifyDistributor = async (req, res) => {
-  try {
-    const { phone, otp } = req.body;
-
-    // verify OTP
-    await verifyOTP(req, res);
-
-    // get distributor data from MongoDB
-    const distributor = await Distributor.findOne({ phone });
-
-    if (!distributor) {
-      return res.status(404).json({ message: 'Distributor not found' });
-    }
-
-    // store distributor data in blockchain
-    const data = { 
-      name: distributor.name, 
-      phone: distributor.phone, 
-      address: distributor.address 
-    };
-    const txid = await addToBlockchain('verifyDistributor', data);
-
-    // store user data in MongoDB
+    // Create new user in MongoDB
     const newUser = new User({
-      name: distributor.name,
+      name: savedDistributor.name,
       role: 'distributor',
     });
 
     await newUser.save();
 
     res.status(200).json({ 
-      message: 'Distributor verified successfully', 
+      message: 'Distributor created and verified successfully', 
       txid: txid 
     });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error verifying distributor' });
+    res.status(500).json({ message: 'Error creating and verifying distributor' });
   }
 };
 
@@ -100,28 +73,121 @@ exports.getDistributorById = async (req, res) => {
   }
 };
 
-exports.searchFarmersByZipcodeAndProduct = async (req, res) => {
+
+/*Now, when a distributor queries for farmers and products based on the zipcode, 
+we can return all the available products in addition to the farmers. We can also populate the 
+farmer field of the product with the corresponding farmer object, so that the distributor can see 
+the details of the farmer associated with the product. The modified getFarmersAndDistributors function will look like this:*/
+
+
+exports.getFarmersAndDistributors = async (req, res) => {
   try {
-    const { zipcode, productName } = req.body;
+    const { zipcode } = req.params;
 
-    const farmers = await Farmer.find({
-      zipcode,
-      'products.productName': { $regex: new RegExp(productName, 'i') }
-    });
+    // Find farmers and distributors based on zipcode
+    const farmers = await Farmer.find({ "address.zipcode": zipcode })
+    const distributors = await Distributor.find({ "address.zipcode": zipcode })
 
-    if (!farmers || farmers.length === 0) {
-      return res.status(404).json({ message: 'No farmers found for the given filters' });
-    }
+    // Find all available products based on zipcode
+    const products = await Product.find({ 
+      "farmer.address.zipcode": zipcode, 
+      status: 'available' 
+    }).populate('farmer', '-_id name phone address');
 
-    res.status(200).json({ farmers });
+    res.status(200).json({ farmers, distributors, products });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error searching for farmers' });
+    res.status(500).json({ message: 'Error getting farmers and distributors' });
   }
 };
 
 
+/*This function accepts two query parameters: zipcode and productName. If productName is provided, 
+the function adds a new filter to find products by name. The $regex operator is used to perform a 
+case-insensitive search for products that contain the provided string in their name. If productName 
+is not provided, the function only filters products by zipcode.*/
+
+exports.getProductsByZipcode = async (req, res) => {
+  try {
+    const { zipcode, productName } = req.query;
+
+    const filter = {
+      "farmer.address.zipcode": zipcode,
+      status: 'available'
+    };
+
+    if (productName) {
+      filter.name = { $regex: productName, $options: 'i' };
+    }
+
+    // Find products based on filter
+    const products = await Product.find(filter).populate('farmer');
+
+    res.status(200).json({ products });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error getting products by zipcode' });
+  }
+};
+
+
+
+
+/*Now, when a distributor sends a purchase request for a product, we can update the distributor 
+field of the product with the corresponding distributor object and set its status to "sold". 
+We can also notify the farmer about the purchase request. The modified purchaseProduct function will look like this:*/
+
+exports.purchaseProduct = async (req, res) => {
+  try {
+    const { productId, distributorId } = req.body;
+
+    // Check if product exists
+    const product = await Product.findById(productId).populate('farmer');
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Check if product is available
+    if (product.status !== 'available') {
+      return res.status(400).json({ message: 'Product is not available' });
+    }
+
+    // Check if distributor exists
+    const distributor = await Distributor.findById(distributorId);
+    if (!distributor) {
+      return res.status(404).json({ message: 'Distributor not found' });
+    }
+    
+    // Update product status to 'sold'
+    product.status = 'sold';
+    product.distributor = distributorId;
+    await product.save();
+    
+    // Add product to distributor's list of purchased products
+    distributor.purchasedProducts.push(productId);
+    await distributor.save();
+    
+    // Send SMS notification to farmer
+    const farmer = product.farmer;
+    const message = `Your product '${product.name}' has been sold to ${distributor.name} with the zipcode ${distributor.address.zipcode}.`;
+    twilio.messages.create({
+      to: farmer.phone,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      body: message
+    });
+
+    res.status(200).json({ message: 'Product purchased successfully', product });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error purchasing product' });
+    }
+    
+};
+
+    
 
 /*This is a JavaScript module named distributorController.js. It exports several functions that handle 
 HTTP requests and responses related to the management of distributors, which are entities that represent 

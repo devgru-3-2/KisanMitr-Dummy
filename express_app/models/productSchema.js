@@ -1,6 +1,3 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-
 const productSchema = new Schema({
   name: {
     type: String,
@@ -18,20 +15,36 @@ const productSchema = new Schema({
   distributor: {
     type: Schema.Types.ObjectId,
     ref: 'Distributor',
-    required: true
+    default: null
   },
   nodalAgency: {
     type: Schema.Types.ObjectId,
     ref: 'NodalAgency',
-    required: true
+    default: null
   },
   quantity: {
     type: Number,
     required: true
   },
+  status: {
+    type: String,
+    enum: ['available', 'sold', 'approved'],
+    default: 'available'
+  },
   date: {
     type: Date,
     default: Date.now
+  },
+  purchaseRequest: {
+    distributor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Distributor',
+      required: true
+    },
+    zipcode: {
+      type: String,
+      required: true
+    }
   }
 });
 

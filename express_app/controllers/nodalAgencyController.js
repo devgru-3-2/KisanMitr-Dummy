@@ -1,16 +1,18 @@
-const NodalAgency = require('../models/nodalAgencySchema');
-const Distributor = require('../models/distributorSchema');
-const User = require('../models/userSchema');
-
-const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
+const { verifyOTP, sendOTP } = require('./auth');
+const NodalAgency = require('../models/NodalAgency');
+const Distributor = require('../models/Distributor');
+const User = require('../models/User');
 
-exports.createNodalAgency = async (req, res) => {
+exports.createAndVerifyNodalAgency = async (req, res) => {
   try {
     const { name, phone, address } = req.body;
 
-    // send OTP to nodal agency
+    // send OTP
     await sendOTP(req, res);
+
+    // verify OTP
+    await verifyOTP(req, res);
 
     // store nodal agency data in MongoDB
     const newNodalAgency = new NodalAgency({
@@ -29,57 +31,25 @@ exports.createNodalAgency = async (req, res) => {
     };
     const txid = await addToBlockchain('createNodalAgency', data);
 
-    res.status(200).json({ 
-      message: 'Nodal agency created successfully', 
-      txid: txid
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error creating nodal agency' });
-  }
-};
-
-exports.verifyNodalAgency = async (req, res) => {
-  try {
-    const { phone, otp } = req.body;
-
-    // verify OTP
-    await verifyOTP(req, res);
-
-    // get nodal agency data from MongoDB
-    const nodalAgency = await NodalAgency.findOne({ phone });
-
-    if (!nodalAgency) {
-      return res.status(404).json({ message: 'Nodal agency not found' });
-    }
-
-    // store nodal agency data in blockchain
-    const data = { 
-      name: nodalAgency.name, 
-      phone: nodalAgency.phone, 
-      address: nodalAgency.address 
-    };
-    const txid = await addToBlockchain('verifyNodalAgency', data);
-
     // store user data in MongoDB
     const newUser = new User({
-      name: nodalAgency.name,
+      name: savedNodalAgency.name,
       role: 'nodalAgency',
     });
 
     await newUser.save();
 
     res.status(200).json({ 
-      message: 'Nodal agency verified successfully', 
+      message: 'Nodal agency created and verified successfully', 
       txid: txid 
     });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error verifying nodal agency' });
+    res.status(500).json({ message: 'Error creating and verifying nodal agency' });
   }
 };
+
 
 exports.logProcurement = async (req, res) => {
   try {
