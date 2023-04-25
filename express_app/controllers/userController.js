@@ -63,28 +63,3 @@ exports.updateUser = async (req, res) => {
     res.status(500).json({ message: 'Error updating user' });
   }
 };
-
-exports.deleteUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Determine which collection to delete the user from
-    let user;
-    switch (role) {
-      case 'Farmer':
-        user = await Farmer.findByIdAndDelete(id);
-        break;
-      case 'Distributor':
-        user = await Distributor.findByIdAndDelete(id);
-        break;
-      default:
-        user = await User.findByIdAndDelete(id);
-        break;
-    }
-
-    res.status(200).json({ message: 'User deleted successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error deleting user' });
-  }
-};

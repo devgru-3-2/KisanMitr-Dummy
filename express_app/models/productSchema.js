@@ -1,7 +1,20 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const procurementSchema = new Schema({
+const productSchema = new Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  price: {
+    type: Number,
+    required: true
+  },
+  farmer: {
+    type: Schema.Types.ObjectId,
+    ref: 'Farmer',
+    required: true
+  },
   distributor: {
     type: Schema.Types.ObjectId,
     ref: 'Distributor',
@@ -10,11 +23,6 @@ const procurementSchema = new Schema({
   nodalAgency: {
     type: Schema.Types.ObjectId,
     ref: 'NodalAgency',
-    required: true
-  },
-  product: {
-    type: Schema.Types.ObjectId,
-    ref: 'Product',
     required: true
   },
   quantity: {
@@ -27,6 +35,6 @@ const procurementSchema = new Schema({
   }
 });
 
-const Procurement = mongoose.model('Procurement', procurementSchema);
+const Product = mongoose.model('Product', productSchema);
 
-module.exports = Procurement;
+module.exports = Product;

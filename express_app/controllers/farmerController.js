@@ -1,5 +1,7 @@
 const Farmer = require('../models/farmerSchema');
+const Distributor = require('../models/distributorSchema');
 const User = require('../models/userSchema');
+
 const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
 
@@ -76,6 +78,22 @@ exports.verifyFarmer = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error verifying farmer' });
+  }
+};
+
+exports.getFarmersAndDistributors = async (req, res) => {
+  try {
+    const { zipcode } = req.params;
+
+    // Find farmers and distributors based on zipcode
+    const farmers = await Farmer.find({ "address.zipcode": zipcode })
+    const distributors = await Distributor.find({ "address.zipcode": zipcode })
+
+    res.status(200).json({ farmers, distributors });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error getting farmers and distributors' });
   }
 };
 

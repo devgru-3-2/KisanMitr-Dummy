@@ -1,5 +1,6 @@
 const Distributor = require('../models/distributorSchema');
 const User = require('../models/userSchema');
+const Farmer = require('../models/farmerSchema');
 const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
 
@@ -99,52 +100,25 @@ exports.getDistributorById = async (req, res) => {
   }
 };
 
-exports.updateDistributorById = async (req, res) => {
+exports.searchFarmersByZipcodeAndProduct = async (req, res) => {
   try {
-    const updatedDistributor = await Distributor.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const { zipcode, productName } = req.body;
 
-    // store updated distributor data in blockchain
-    const data = { 
-      name: updatedDistributor.name, 
-      phone: updatedDistributor.phone, 
-      address: updatedDistributor.address 
-    };
-    const txid = await addToBlockchain('updateDistributor', data);
-
-    res.status(200).json({ 
-      message: 'Distributor updated successfully', 
-      txid: txid 
+    const farmers = await Farmer.find({
+      zipcode,
+      'products.productName': { $regex: new RegExp(productName, 'i') }
     });
+
+    if (!farmers || farmers.length === 0) {
+      return res.status(404).json({ message: 'No farmers found for the given filters' });
+    }
+
+    res.status(200).json({ farmers });
+
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error updating distributor' });
+    res.status(500).json({ message: 'Error searching for farmers' });
   }
-};
-
-exports.deleteDistributorById = async (req, res) => {
-    try {
-        const deletedDistributor = await Distributor.findByIdAndDelete(req.params.id);
-        // delete distributor data from blockchain
-        const data = { 
-            name: deletedDistributor.name, 
-            phone: deletedDistributor.phone, 
-            address: deletedDistributor.address 
-        };
-        const txid = await addToBlockchain('deleteDistributor', data);
-  
-        res.status(200).json({ 
-            message: 'Distributor deleted successfully', 
-            txid: txid 
-        });
-  
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: 'Error deleting distributor' });
-        }
 };
 
 
@@ -183,19 +157,6 @@ collection. It retrieves all the Distributor objects using the find method and r
 getDistributorById: This function handles a GET request to retrieve a distributor by ID from the MongoDB distributors 
 collection. It extracts the ID from the request parameters, retrieves the corresponding Distributor object using the 
 findById method, and responds with the retrieved object.
-
-
-updateDistributorById: This function handles a PUT request to update a distributor's information in the MongoDB 
-distributors collection. It extracts the ID from the request parameters, updates the corresponding Distributor object 
-with the fields in the request body, stores its data in the blockchain using addToBlockchain, and responds with a success 
-message and the transaction ID of the blockchain record.
-
-
-deleteDistributorById: This function handles a DELETE request to delete a distributor from the MongoDB distributors 
-collection. It extracts the ID from the request parameters, deletes the corresponding Distributor object using the 
-findByIdAndDelete method, deletes its data from the blockchain using addToBlockchain, and responds with a success 
-message and the transaction ID of the blockchain record.
-
 
 Overall, this module implements the CRUD (create, read, update, delete) operations for distributors and provides 
 additional functionality for verifying phone numbers with OTPs and storing data in a blockchain.
