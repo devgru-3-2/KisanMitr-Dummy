@@ -2,55 +2,80 @@ const Farmer = require('../models/farmerSchema');
 const Distributor = require('../models/distributorSchema');
 const User = require('../models/userSchema');
 const Product = require('../models/productSchema');
+const session = require('express-session');
+const express = require('express');
 
 const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
 
+
 exports.createAndVerifyFarmer = async (req, res) => {
   try {
-    const { name, phone, address, otp } = req.body;
-
+    const { name, phone, zipcode } = req.body;
+    console.log(req.body);
+   // const phone = "+91" + phone;
     // send OTP to farmer
-    await sendOTP(req, res);
+    //console.log(phoneNumber);
+    const verification = await sendOTP(phone);
+    console.log(verification);
+    console.log(typeof(verification.sid));
+    console.log(req.session);
+    req.session.verificationSid = verification.sid; // store verification SID in session variable
+    req.session.farmerDetails = { name, phone : phone, zipcode }; // store farmer details in session variable
+    console.log(req.session.farmerDetails);
 
-    // verify OTP
-    await verifyOTP(req, res);
+    // redirect farmer to OTP verification page
+    res.redirect('/farmer/farmer-verify-otp');
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error creating and verifying farmer' });
+  }
+};
+
+exports.verifyFarmerOTP = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    if (!req.session.farmerDetails) {
+      return res.status(401).json({ message: 'Farmer details not found' });
+    }
+    
+    const { name, phone, zipcode } = req.session.farmerDetails;
+
+    // verify OTP entered by farmer
+    const verificationCheck = await verifyOTP(phone, otp);
+
+    if (!verificationCheck.success) {
+      return res.status(401).json({ message: verificationCheck.message });
+    }
 
     // store farmer data in MongoDB
-    const newFarmer = new Farmer({
-      name,
-      phone,
-      address,
-    });
-
+    const newFarmer = new Farmer({ name, phone, zipcode });
     const savedFarmer = await newFarmer.save();
-
-    // store farmer data in blockchain
-    const data = { 
-      name: savedFarmer.name, 
-      phone: savedFarmer.phone, 
-      address: savedFarmer.address 
-    };
-    const txid = await addToBlockchain('createFarmer', data);
 
     // store user data in MongoDB
     const newUser = new User({
       name: savedFarmer.name,
       role: 'farmer',
     });
-
     await newUser.save();
 
-    res.status(200).json({ 
-      message: 'Farmer created and verified successfully', 
-      txid: txid
-    });
+    // add farmer data to blockchain
+    await addToBlockchain(savedFarmer);
 
+    // remove session variables
+    delete req.session.verificationSid;
+    delete req.session.farmerDetails;
+
+    // render dashboard page for farmer
+    res.render('farmer/dashboard', { farmer: savedFarmer });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Error creating and verifying farmer' });
+    res.status(500).json({ message: 'Error verifying farmer' });
   }
 };
+
+
+
 
 exports.getFarmersAndDistributors = async (req, res) => {
   try {

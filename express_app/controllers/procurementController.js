@@ -1,5 +1,5 @@
 const Procurement = require('../models/procurementSchema');
-const { sendDataToEthereumBlockchain } = require('../utils/blockchainUtils');
+const { sendDataToEthereumBlockchain } = require('../utils/blockchain');
 
 // Get all procurements made by a specific distributor
 exports.getProcurementsByDistributor = async (req, res) => {
@@ -122,7 +122,7 @@ It accepts a distributorId as a parameter in the URL and returns the matching pr
 The second function addProcurement creates a new procurement in the MongoDB database. It accepts a JSON object 
 in the request body containing the distributorId, productId, quantity, and date of the procurement. 
 It creates a new Procurement document and saves it to the database. Then it sends the same data to an Ethereum 
-blockchain network using the sendDataToEthereumBlockchain function from the blockchainUtils module. Finally, 
+blockchain network using the sendDataToEthereumBlockchain function from the blockchain module. Finally, 
 it returns the newly created procurement object.
 
 The third function updateProcurement updates an existing procurement in the MongoDB database. It accepts a JSON object 

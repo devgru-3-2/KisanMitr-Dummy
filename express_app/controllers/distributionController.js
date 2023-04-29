@@ -1,5 +1,5 @@
 const Distribution = require('../models/distributionSchema');
-const { sendDataToEthereumBlockchain } = require('../utils/blockchainUtils');
+const { sendDataToEthereumBlockchain } = require('../utils/blockchain');
 
 // Get all distributions made by a specific distributor
 exports.getDistributionsByDistributor = async (req, res) => {

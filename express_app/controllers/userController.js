@@ -1,65 +1,31 @@
-const User = require('../models/User');
-const Farmer = require('../models/Farmer');
-const Distributor = require('../models/Distributor');
-
-exports.getUsers = async (req, res) => {
-  try {
-    const users = await User.find();
-    res.status(200).json(users);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error getting users' });
-  }
-};
+const User = require('../models/userSchema');
 
 exports.addUser = async (req, res) => {
   try {
     const { name, role } = req.body;
 
-    // Determine which collection to add the user to
-    let user;
+    // Save the user to the userSchema
+    const user = new User({ name, role });
+    await user.save();
+
+    // Redirect the user to the specific register page based on their role
     switch (role) {
       case 'Farmer':
-        user = new Farmer({ name });
+        res.redirect('/farmer/farmer-register');
+
         break;
       case 'Distributor':
-        user = new Distributor({ name });
+        res.redirect('/distributor/distributor-register');
+        break;
+      case 'Nodal Agency':
+        res.redirect('/nodalAgency/nodalAgency-register');
         break;
       default:
-        user = new User({ name, role });
+        res.redirect('/');
         break;
     }
-
-    await user.save();
-    res.status(201).json({ message: 'User added successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error adding user' });
-  }
-};
-
-exports.updateUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, role } = req.body;
-
-    // Determine which collection to update the user in
-    let user;
-    switch (role) {
-      case 'Farmer':
-        user = await Farmer.findByIdAndUpdate(id, { name });
-        break;
-      case 'Distributor':
-        user = await Distributor.findByIdAndUpdate(id, { name });
-        break;
-      default:
-        user = await User.findByIdAndUpdate(id, { name, role });
-        break;
-    }
-
-    res.status(200).json({ message: 'User updated successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error updating user' });
   }
 };

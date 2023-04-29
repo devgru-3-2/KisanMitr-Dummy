@@ -10,11 +10,9 @@ const farmerSchema = new Schema({
     type: String,
     required: true
   },
-  address: {
-    zipcode: {
+  zipcode: {
       type: String,
       required: true
-    }
   },
   products: [{
     type: Schema.Types.ObjectId,

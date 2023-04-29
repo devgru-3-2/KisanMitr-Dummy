@@ -8,7 +8,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider(`https://goerli.infura.io/
 // Set up the contract ABI and address
 //const contractABI = ... // Define the contract ABI
 //const contractAddress = ... // Define the contract address
-const contract = new web3.eth.Contract(contractABI, contractAddress);
+//const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 // Function to add data to the blockchain
 async function addToBlockchain(data) {

@@ -1,44 +1,57 @@
 const express = require('express');
 const Web3 = require('web3');
 const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+
+
 const dotenv = require('dotenv');
+const registrationRoutes = require('./routes/registrationRoutes');
+const path = require('path');
 
 const app = express();
 
-// Load environment variables from .env file
-dotenv.config();
 
-// Connect to MongoDB database
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+
+app.use(session({
+  secret: 'x9F4Y39F2yr2jrvaLUMLevq',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true } // set it to true if you are using https
+}));
+
+
+
+app.use(cookieParser());
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('./public'));
+
+dotenv.config({ path: 'C:/Users/Bharath/OneDrive/Desktop/Folders/KisanMitr-Dummy/.env' });
+
+mongoose.connect(`mongodb+srv://asaprov:Iamneganyousob%40123@kisanmitr.ua2nz7t.mongodb.net/test`, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
-const infuraEndpoint = `https://goerli.infura.io/v3/${process.env.INFURA_PROJECT_ID}`;
+const infuraEndpoint = `https://goerli.infura.io/v3/249b5372912d478bab5cb978ff7f3302`;
 const web3 = new Web3(new Web3.providers.HttpProvider(infuraEndpoint));
 
-// Middleware to make the web3 and contract instances available to all routes
-app.use((req, res, next) => {
-  req.web3 = web3;
-  req.contractABI = contractABI;
-  req.contractAddress = contractAddress;
-  next();
-});
-
-// Import and use userRoutes
-const userRoutes = require('./routes/userRoutes');
-app.use('/users', userRoutes);
-
-// Import and use nodalAgencyRoutes
-const nodalAgencyRoutes = require('./routes/nodalAgencyRoutes');
-app.use('/nodal-agencies', nodalAgencyRoutes);
-
-// Serve static files from the public folder
-app.use(express.static('public'));
-
-// Set up your routes and middleware here
+app.use('/', registrationRoutes);
 
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  res.render('index');
+});
+
+app.get('/:role/register', (req, res) => {
+  const { role } = req.params;
+  if (role === 'farmer' || role === 'distributor' || role === 'nodalAgency') {
+    res.render(`${role}/${role}-register`);
+  } else {
+    res.redirect('/register');
+  }
 });
 
 app.listen(process.env.PORT || 3000, () => {

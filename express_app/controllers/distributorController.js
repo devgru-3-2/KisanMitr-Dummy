@@ -4,54 +4,61 @@ const Farmer = require('../models/farmerSchema');
 const Product = require('../models/productSchema');
 const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
-const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+/*const twilio = require('twilio')(process.env.ACCOUNT_SID, process.env.AUTH_TOKEN);*/
 
 exports.createAndVerifyDistributor = async (req, res) => {
   try {
-    const { name, phone, address, otp } = req.body;
+    const { name, phone, address } = req.body;
+    const phoneNumber = "+91" + phone;
 
-    // Send OTP
-    await sendOTP(req, res);
+    // send OTP to distributor
+    const verification = await sendOTP(req, phoneNumber);
+    req.session.verificationSid = verification.sid; // store verification SID in session variable
+    req.session.distributorDetails = { name, phoneNumber, address }; // store distributor details in session variable
 
-
-    // Verify OTP
-    await verifyOTP(req, res);
-
-    // Create new distributor in MongoDB
-    const newDistributor = new Distributor({
-      name,
-      phone,
-      address,
-    });
-
-    const savedDistributor = await newDistributor.save();
-
-    // Add distributor data to blockchain
-    const data = { 
-      name: savedDistributor.name, 
-      phone: savedDistributor.phone, 
-      address: savedDistributor.address 
-    };
-    const txid = await addToBlockchain('createDistributor', data);
-
-    // Create new user in MongoDB
-    const newUser = new User({
-      name: savedDistributor.name,
-      role: 'distributor',
-    });
-
-    await newUser.save();
-
-    res.status(200).json({ 
-      message: 'Distributor created and verified successfully', 
-      txid: txid 
-    });
-
+    // redirect distributor to OTP verification page
+    res.redirect('/distributor-verify-otp');
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error creating and verifying distributor' });
   }
 };
+
+exports.verifyDistributorOTP = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const { verificationSid, distributorDetails } = req.session;
+
+    // verify OTP entered by distributor
+    const verificationCheck = await verifyOTP(req, verificationSid, otp);
+
+    if (verificationCheck.status !== 'approved') {
+      return res.status(401).json({ message: 'Invalid OTP' });
+    }
+
+    // store distributor data in MongoDB
+    const newDistributor = new Distributor(distributorDetails);
+    const savedDistributor = await newDistributor.save();
+
+    // store user data in MongoDB
+    const newUser = new User({
+      name: savedDistributor.name,
+      role: 'distributor',
+    });
+    await newUser.save();
+
+    // remove session variables
+    delete req.session.verificationSid;
+    delete req.session.distributorDetails;
+
+    // render dashboard page for distributor
+    res.render('distributor/dashboard', { distributor: savedDistributor });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error verifying distributor' });
+  }
+};
+
 
 exports.getDistributors = async (req, res) => {
   try {
