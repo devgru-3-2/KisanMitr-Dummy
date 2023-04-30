@@ -10,20 +10,20 @@ exports.addUser = async (req, res) => {
 
     // Redirect the user to the specific register page based on their role
     switch (role) {
-      case 'Farmer':
+      case 'farmer':
         res.redirect('/farmer/farmer-register');
-
         break;
-      case 'Distributor':
+      case 'distributor':
         res.redirect('/distributor/distributor-register');
         break;
-      case 'Nodal Agency':
+      case 'nodalAgency':
         res.redirect('/nodalAgency/nodalAgency-register');
         break;
       default:
-        res.redirect('/');
+        res.redirect('/register');
         break;
     }
+    
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error adding user' });

@@ -2,7 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config();  
 
 const accountSid = 'ACcff34f5bc735cb81acd6fcab44b39cdf';
-const authToken = '6f8ab595761ccc709557a02270a2a9d7';
+const authToken = 'a1f9aaa47821a95fcaf61075b0603542';
 const verifyServiceSid = 'VAd3f8bf67074bc8d8b8dcf3d13a5a59ee';
 const fromPhoneNumber = '+919148764621';
 
@@ -49,7 +49,7 @@ exports.sendOTP = async (phone) => {
 exports.verifyOTP = async (phoneNumber, otp) => {
   try {
     const verificationCheck = await client.verify.v2.services(verifyServiceSid).verificationChecks.create({
-        to: `+91${phone}`,
+        to: `+91${phoneNumber}`,
         code: otp,
       });
 
