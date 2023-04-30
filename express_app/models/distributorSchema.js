@@ -23,7 +23,11 @@ const distributorSchema = new Schema({
   procurements: [{
     type: Schema.Types.ObjectId,
     ref: 'Procurement'
-  }]
+  }],
+  role: {
+    type: String,
+    default: 'distributor'
+  }
 });
 
 const Distributor = mongoose.model('Distributor', distributorSchema);

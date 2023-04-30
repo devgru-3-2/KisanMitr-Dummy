@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Farmer Dashboard</title>
+</head>
+<body>
+  <h1>Welcome, <%= farmer.name %>!</h1>
+
+  <h2>Products</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Quantity</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% farmer.products.forEach((product) => { %>
+        <tr>
+          <td><%= product.name %></td>
+          <td><%= product.price %></td>
+          <td><%= product.quantity %></td>
+          <td><%= product.status %></td>
+          <td>
+            <% if (product.status === 'pending') { %>
+              <form method="post" action="/approvePurchaseRequest">
+                <input type="hidden" name="productId" value="<%= product._id %>">
+                <label for="nodalAgencyId">Approve Request from:</label>
+                <select name="nodalAgencyId" required>
+                  <% farmer.nodalAgencies.forEach((nodalAgency) => { %>
+                    <option value="<%= nodalAgency._id %>"><%= nodalAgency.name %></option>
+                  <% }); %>
+                </select>
+                <button type="submit">Approve Request</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <h2>Create Product</h2>
+  <form method="post" action="/createProduct">
+    <label for="name">Name:</label>
+    <input type="text" name="name" required><br>
+
+    <label for="price">Price:</label>
+    <input type="number" name="price" min="0" step="0.01" required><br>
+
+    <label for="quantity">Quantity:</label>
+    <input type="number" name="quantity" min="0" required><br>
+
+    <input type="hidden" name="farmerId" value="<%= farmer._id %>">
+
+    <button type="submit">Create Product</button>
+  </form>
+
+  <h2>Find Distributors</h2>
+  <form method="get" action="/getFarmersAndDistributors">
+    <label for="zipcode">Zip Code:</label>
+    <input type="text" name="zipcode" required><br>
+
+    <button type="submit">Find Distributors</button>
+  </form>
+</body>
+</html>

@@ -12,10 +12,19 @@ const nodalAgencySchema = new Schema({
       required: true
     }
   },
+  phone: {  
+    type: String,
+    required: true
+  },
+
   procurements: [{
     type: Schema.Types.ObjectId,
     ref: 'Procurement'
-  }]
+  }],
+  role: {
+    type: String,
+    default: 'nodalAgency'
+  }
 });
 
 const NodalAgency = mongoose.model('NodalAgency', nodalAgencySchema);

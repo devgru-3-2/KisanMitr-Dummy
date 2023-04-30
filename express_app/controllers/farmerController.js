@@ -60,7 +60,7 @@ exports.verifyFarmerOTP = async (req, res) => {
     await newUser.save();
 
     // add farmer data to blockchain
-    await addToBlockchain(savedFarmer);
+    //await addToBlockchain(savedFarmer);
 
     // remove session variables
     delete req.session.verificationSid;

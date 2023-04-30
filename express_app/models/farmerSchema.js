@@ -8,16 +8,21 @@ const farmerSchema = new Schema({
   },
   phone: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
   zipcode: {
-      type: String,
-      required: true
+    type: String,
+    required: true
   },
   products: [{
     type: Schema.Types.ObjectId,
     ref: 'Product'
-  }]
+  }],
+  role: {
+    type: String,
+    default: 'farmer'
+  }
 });
 
 const Farmer = mongoose.model('Farmer', farmerSchema);
