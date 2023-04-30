@@ -1,0 +1,16 @@
+
+views/: This directory contains all the .ejs files for the application.
+
+
+views/nodalAgency/: This directory contains the .ejs files related to the nodal agency, such as the dashboard and procurement form.
+
+
+views/distributor/: This directory contains the .ejs files related to the distributor, such as the dashboard, distribution form, and 
+purchase request form.
+
+
+views/farmer/: This directory contains the .ejs files related to the farmer, such as the dashboard, product form, and purchase 
+requests.
+
+
+views/partials/: This directory contains the partial .ejs files that are included in multiple views, such as the header and footer.

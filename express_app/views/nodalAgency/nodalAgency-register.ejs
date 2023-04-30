@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Nodal Agency Registration</title>
+  </head>
+  <body>
+    <h1>Nodal Agency Registration</h1>
+    <form method="POST" action="/nodal-agency/register">
+      <label for="name">Name:</label>
+      <input type="text" name="name" required><br><br>
+      <label for="phone">Phone:</label>
+      <input type="tel" name="phone" pattern="[0-9]{10}" required><br><br>
+      <label for="address">Zipcode:</label>
+      <input type="text" name="address.zipcode" pattern="[0-9]{6}" required><br><br>
+      <input type="submit" value="Submit">
+    </form>
+    </body>
+</html>
