@@ -2,6 +2,8 @@ const Distributor = require('../models/distributorSchema');
 const User = require('../models/userSchema');
 const Farmer = require('../models/farmerSchema');
 const Product = require('../models/productSchema');
+const Procurement = require('../models/procurementSchema');
+const nodalAgency = require('../models/nodalAgencySchema');
 const { sendOTP, verifyOTP } = require('./auth');
 const { addToBlockchain } = require('../utils/blockchain');
 /*const twilio = require('twilio')(process.env.ACCOUNT_SID, process.env.AUTH_TOKEN);*/
@@ -60,6 +62,25 @@ exports.verifyDistributorOTP = async (req, res) => {
 };
 
 
+exports.getDistributorDashboard = async (req, res) => {
+  try {
+    const distributorId = req.user._id;
+
+    const [distributor, products, farmers, purchasedProducts, procurements] = await Promise.all([
+      Distributor.findById(distributorId),
+      Product.find({ distributors: distributorId }),
+      Farmer.find(),
+      Product.find({ purchasers: distributorId }),
+      Procurement.find({ distributor: distributorId }).populate('nodalAgency').populate('product'),
+    ]);
+
+    res.render('dashboard', { distributor, products, farmers, purchasedProducts, procurements });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching distributor dashboard' });
+  }
+};
+
 exports.getDistributors = async (req, res) => {
   try {
     const distributors = await Distributor.find({});
@@ -69,6 +90,19 @@ exports.getDistributors = async (req, res) => {
     res.status(500).json({ message: 'Error getting distributors' });
   }
 };
+
+exports.getDistributorProcurements = async (req, res) => {
+  try {
+    const distributorId = req.params.id;
+    const distributor = await Distributor.findById(distributorId).populate('procurements');
+
+    res.render('distributor/procurements', { procurements: distributor.procurements });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error getting distributor procurements' });
+  }
+};
+
 
 exports.getDistributorById = async (req, res) => {
   try {
@@ -196,43 +230,43 @@ exports.purchaseProduct = async (req, res) => {
 
     
 
-/*This is a JavaScript module named distributorController.js. It exports several functions that handle 
-HTTP requests and responses related to the management of distributors, which are entities that represent 
-suppliers in a supply chain system.
+/*
 
-The module starts by importing three dependencies: Distributor and User from the ../models directory, and 
-sendOTP and verifyOTP from the ./auth module. Distributor and User are Mongoose models for MongoDB collections 
-that store information about distributors and users, respectively. sendOTP and verifyOTP are functions that 
-handle the process of sending and verifying OTPs (one-time passwords) for phone number authentication.
+Documentation for distributorController.js:
 
+This module exports several functions that manage and control the operations of the distributor entity in the application.
 
-The module exports the following functions:
+createAndVerifyDistributor(req, res): This function is an asynchronous function that accepts an HTTP request and response 
+objects as parameters. It creates a new distributor by sending an OTP to the provided phone number for verification purposes. 
+It then stores the verification SID and distributor details in the session variable and redirects the user to the distributor 
+OTP verification page.
 
-createDistributor: This function handles a POST request to create a new distributor. It extracts the name, 
-phone, and address fields from the request body, sends an OTP to the specified phone number, creates a new 
-Distributor object with the extracted fields, saves it to the MongoDB distributors collection, and stores 
-its data in the blockchain using the addToBlockchain function from the ../utils/blockchain module. It responds
- with a success message and the transaction ID of the blockchain record.
+verifyDistributorOTP(req, res): This function is an asynchronous function that accepts an HTTP request and response objects as 
+parameters. It verifies the OTP entered by the distributor against the stored SID in the session variable. If the OTP is valid, 
+it creates a new distributor record in the database, stores user details, and renders the distributor dashboard.
 
+getDistributorDashboard(req, res): This function is an asynchronous function that accepts an HTTP request and response objects 
+as parameters. It retrieves the distributor's dashboard and renders it with details of the products, farmers, procurements, and 
+purchased products associated with the distributor.
 
+getDistributors(req, res): This function is an asynchronous function that accepts an HTTP request and response objects as parameters. 
+It retrieves all the distributors' records from the database and returns them as a JSON response.
 
-verifyDistributor: This function handles a POST request to verify a distributor's phone number with an OTP. 
-It extracts the phone and OTP fields from the request body, verifies the OTP using the verifyOTP function, 
-retrieves the corresponding Distributor object from the MongoDB collection, stores its data in the blockchain 
-using addToBlockchain, creates a new User object with the distributor's name and the role "distributor", saves 
-it to the users collection, and responds with a success message and the transaction ID of the blockchain record.
+getDistributorProcurements(req, res): This function is an asynchronous function that accepts an HTTP request and response objects as 
+parameters. It retrieves a specific distributor's procurement records from the database and renders them on the 
+distributor/procurements view.
 
+getDistributorById(req, res): This function is an asynchronous function that accepts an HTTP request and response objects as 
+parameters. It retrieves a specific distributor's record from the database based on the provided ID and returns it as a JSON response.
 
-getDistributors: This function handles a GET request to retrieve all the distributors in the MongoDB distributors 
-collection. It retrieves all the Distributor objects using the find method and responds with an array of the retrieved objects.
+getFarmersAndDistributors(req, res): This function is an asynchronous function that accepts an HTTP request and response objects as 
+parameters. It retrieves all farmers and distributors' records based on the provided zipcode query parameter. It also retrieves all 
+the available products associated with the farmers in that zipcode. If the productName query parameter is provided, the function 
+filters the products by name using the $regex operator. The function returns the retrieved records as a JSON response.
 
-
-getDistributorById: This function handles a GET request to retrieve a distributor by ID from the MongoDB distributors 
-collection. It extracts the ID from the request parameters, retrieves the corresponding Distributor object using the 
-findById method, and responds with the retrieved object.
-
-Overall, this module implements the CRUD (create, read, update, delete) operations for distributors and provides 
-additional functionality for verifying phone numbers with OTPs and storing data in a blockchain.
+The module imports some models and utility functions to implement these operations. The imported models are Distributor, User, 
+Farmer, Product, and Procurement. The imported utility functions are sendOTP and verifyOTP from the auth module and addToBlockchain 
+from the blockchain module.
 
 */
 

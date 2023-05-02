@@ -35,45 +35,66 @@ exports.createAndVerifyFarmer = async (req, res) => {
 exports.verifyFarmerOTP = async (req, res) => {
   try {
     const { otp } = req.body;
-    if (!req.session.farmerDetails) {
-      return res.status(401).json({ message: 'Farmer details not found' });
-    }
-    
-    const { name, phone, zipcode } = req.session.farmerDetails;
 
-    // verify OTP entered by farmer
-    const verificationCheck = await verifyOTP(phone, otp);
+    // Verify the OTP entered by the farmer
+    const verificationCheck = await verifyOTP(req.session.phone, otp);
 
     if (!verificationCheck.success) {
       return res.status(401).json({ message: verificationCheck.message });
     }
 
-    // store farmer data in MongoDB
-    const newFarmer = new Farmer({ name, phone, zipcode });
+    // Save the farmer data in MongoDB
+    const newFarmer = new Farmer(req.session.farmerDetails);
     const savedFarmer = await newFarmer.save();
 
-    // store user data in MongoDB
+    // Save the user data in MongoDB
     const newUser = new User({
       name: savedFarmer.name,
       role: 'farmer',
     });
     await newUser.save();
 
-    // add farmer data to blockchain
+    // Add the farmer data to the blockchain
     //await addToBlockchain(savedFarmer);
 
-    // remove session variables
-    delete req.session.verificationSid;
-    delete req.session.farmerDetails;
+    // Set up the session with the user information
+    req.session.user = {
+      _id: savedFarmer._id,
+      name: savedFarmer.name,
+      role: 'farmer',
+    };
 
-    // render dashboard page for farmer
-    res.render('farmer/dashboard', { farmer: savedFarmer });
+    // Redirect to the dashboard page
+    res.redirect("/farmer/dashboard");
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error verifying farmer' });
   }
 };
 
+
+exports.getFarmerDashboard = async (req, res) => {
+  try {
+    // Check if the user is authenticated
+    if (!req.session.user) {
+      return res.redirect('/login');
+    }
+
+    // Retrieve the user ID from the session
+    const userId = req.session.user._id;
+
+    const farmer = await Farmer.findById(userId).populate('products');
+
+    if (!farmer) {
+      return res.status(404).json({ message: 'Farmer not found' });
+    }
+
+    res.render('farmer/dashboard', { farmer: req.session.farmer });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error getting farmer dashboard' });
+  }
+};
 
 
 
@@ -85,7 +106,8 @@ exports.getFarmersAndDistributors = async (req, res) => {
     const farmers = await Farmer.find({ "address.zipcode": zipcode })
     const distributors = await Distributor.find({ "address.zipcode": zipcode })
 
-    res.status(200).json({ farmers, distributors });
+    // Render the dashboard template with the farmers and distributors data
+    res.render('dashboard', { farmer: req.user, farmers, distributors });
 
   } catch (error) {
     console.error(error);
@@ -118,10 +140,7 @@ exports.createProduct = async (req, res) => {
     farmer.products.push(savedProduct._id);
     await farmer.save();
 
-    res.status(200).json({ 
-      message: 'Product created successfully',
-      product: savedProduct
-    });
+    res.redirect('/farmer/dashboard');
 
   } catch (error) {
     console.error(error);
@@ -130,31 +149,78 @@ exports.createProduct = async (req, res) => {
 };
 
 
+exports.approvePurchaseRequest = async (req, res) => {
+  try {
+    const { productId } = req.body;
 
-/*We start by importing the necessary modules - twilio for sending SMS messages and generateOTP function 
-from the otp.js file for generating OTPs.
+    // Check if product exists
+    const product = await Product.findById(productId).populate('farmer');
 
-The sendOTP function is an asynchronous function that takes the phone number of the Farmer as input, 
-generates an OTP using the generateOTP function, creates a message containing the OTP, and sends it to 
-the phone number using the Twilio API. The OTP is also stored in a map where the phone number is the key.
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
 
-The verifyOTP function is also an asynchronous function that takes the phone number and OTP as input. 
-It retrieves the stored OTP for the given phone number, compares it with the OTP provided in the request body. 
-If they match, the OTP is deleted from the map and the function returns a success message. If they don't match, 
-the function returns an error message indicating an invalid OTP.
+    // Check if product status is 'pending'
+    if (product.status !== 'pending') {
+      return res.status(400).json({ message: 'Product is not pending' });
+    }
 
-The first function createAndVerifyFarmer creates a new farmer and saves the farmer's data in MongoDB. 
-The function also sends an OTP to the farmer's phone, verifies the OTP, stores the farmer's data in a blockchain, 
-and creates a new user for the farmer. The function returns a success message and the transaction ID generated by the blockchain.
+    // Update product status to 'sold'
+    product.status = 'sold';
+    product.purchaseRequest = null;
+    await product.save();
 
-The second function getFarmersAndDistributors retrieves a list of farmers and distributors based on a given zip code. 
-It searches for farmers and distributors in the MongoDB collections Farmers and Distributors, respectively, 
-whose address.zipcode matches the provided value. The function returns the list of farmers and distributors as a JSON object.
+    // Send SMS notification to distributor
+    const message = `Your purchase request for product ${product.name} with ID ${product._id} has been approved by ${product.farmer.name}`;
+    await sendSMS(product.purchaseRequest.distributor.phone, message);
 
-The third function createProduct creates a new product and associates it with an existing farmer. The function checks if the 
-farmer exists in MongoDB, creates a new product with the provided details, saves the product in the Products collection, 
-adds the product ID to the farmer.products array, and saves the farmer's data in MongoDB. The function returns a success message 
-and the newly created product details.
+    res.redirect('/farmer/dashboard');
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error approving purchase request' });
+  }
+};
 
-Overall, these functions provide basic functionality for creating farmers, products, and users, and retrieving information about 
-farmers and distributors based on location.*/
+
+  
+
+
+/*
+
+This file contains the controller functions for handling the routes related to the farmer's activities. 
+The functions defined in this file are:
+
+createAndVerifyFarmer: This function receives a POST request containing the farmer's details (name, phone, and zipcode), 
+sends an OTP to the farmer's phone number, stores the verification SID in the session variable, and redirects the farmer 
+to the OTP verification page.
+
+verifyFarmerOTP: This function receives a POST request containing the OTP entered by the farmer, verifies the OTP with 
+the Twilio API, saves the farmer's and user's data in the database, removes the session variables, and renders the farmer's 
+dashboard page.
+
+getFarmerDashboard: This function receives a GET request, finds the farmer's data using the farmer's ID from the request's 
+user object, populates the farmer's products array, and renders the farmer's dashboard page with the farmer's and product's data.
+
+getFarmersAndDistributors: This function receives a GET request with a zipcode parameter, finds the farmers and distributors 
+with that zipcode, and renders the dashboard page with the farmer's and farmers' and distributors' data.
+
+createProduct: This function receives a POST request containing the product's details (farmerId, name, price, and quantity), 
+creates a new product, saves it to the database, adds the product's ID to the farmer's products array, saves the farmer's data 
+to the database, and redirects the user to the farmer's dashboard page.
+
+approvePurchaseRequest: This function receives a POST request containing the product's ID, checks if the product exists and 
+its status is "pending," updates the product's status to "sold," sends an SMS notification to the distributor, and sends a 
+response with a success message.
+
+This file requires the following modules:
+
+express: Node.js web application framework for creating HTTP servers and handling HTTP requests and responses.
+express-session: middleware for managing sessions in Express.js.
+farmerSchema: a mongoose schema model for the farmer's data.
+distributorSchema: a mongoose schema model for the distributor's data.
+userSchema: a mongoose schema model for the user's data.
+productSchema: a mongoose schema model for the product's data.
+sendOTP: a function from the auth.js file that sends an OTP to the farmer's phone number using the Twilio API.
+verifyOTP: a function from the auth.js file that verifies the OTP entered by the farmer using the Twilio API.
+addToBlockchain: a function from the utils/blockchain.js file that adds the farmer's data to the blockchain.
+*/

@@ -5,7 +5,7 @@ node_modules/
 .env
 
 # ignore build output directory
-build/
+
 
 # ignore coverage output directory
 coverage/
@@ -18,4 +18,3 @@ package-lock.json
 .idea/
 
 # ignore contract build artifacts
-/build/contracts/

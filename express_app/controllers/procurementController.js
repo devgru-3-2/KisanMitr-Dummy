@@ -6,11 +6,12 @@ exports.getProcurementsByDistributor = async (req, res) => {
   try {
     const procurements = await Procurement.find({ distributor: req.params.distributorId })
       .populate('product');
-    res.json(procurements);
+    res.render('nodalAgency/dashboard', { procurements });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // Add a new procurement
 exports.addProcurement = async (req, res) => {
