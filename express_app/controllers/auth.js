@@ -1,10 +1,10 @@
 const dotenv = require('dotenv');
 dotenv.config();  
 
-const accountSid = 'ACcff34f5bc735cb81acd6fcab44b39cdf';
-const authToken = 'a1f9aaa47821a95fcaf61075b0603542';
-const verifyServiceSid = 'VAd3f8bf67074bc8d8b8dcf3d13a5a59ee';
-const fromPhoneNumber = '+919148764621';
+const accountSid = '...';
+const authToken = '...';
+const verifyServiceSid = '...';
+const fromPhoneNumber = '...';
 
 const client = require('twilio')(accountSid, authToken);
 
