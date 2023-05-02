@@ -12,8 +12,8 @@ const router = express.Router();
 const registrationRoutes = require('./routes/registrationRoutes');
 const loginRoutes = require('./routes/loginRoutes');
 const farmerRoutes = require('./routes/farmerRoutes');
-//const distributorRoutes = require('./routes/distributorRoutes');
-//const nodalAgencyRoutes = require('./routes/nodalAgencyRoutes');
+const distributorRoutes = require('./routes/distributorRoutes');
+const nodalAgencyRoutes = require('./routes/nodalAgencyRoutes');
 
 // create express app
 const app = express();
@@ -26,17 +26,28 @@ mongoose.connect(`mongodb+srv://asaprov:Iamneganyousob%40123@kisanmitr.ua2nz7t.m
 const infuraEndpoint = `https://goerli.infura.io/v3/249b5372912d478bab5cb978ff7f3302`;
 const web3 = new Web3(new Web3.providers.HttpProvider(infuraEndpoint));
 
+// create MongoDBStore instance
+const MongoDBStore = require('connect-mongodb-session')(session);
+
+const store = new MongoDBStore({
+  uri: 'mongodb+srv://asaprov:Iamneganyousob%40123@kisanmitr.ua2nz7t.mongodb.net/test',
+  collection: 'sessions'
+});
+
 // set up middleware
 app.use(router);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(session({
-  secret: 'x9F4Y39F2yr2jrvaLUMLevq',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: false } // set it to false if you are not using https
-}));
+app.use(
+  session({
+    secret: 'x9F4Y39F2yr2jrvaLUMLevq',
+    resave: true,
+    saveUninitialized: true,
+    cookie: { secure: false },
+    store: store
+  })
+);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -44,11 +55,13 @@ app.set('views', path.join(__dirname, 'views'));
 app.get('/', (req, res) => {
   res.render('index');
 });
+
 app.use('/register', registrationRoutes);
 app.use('/login', loginRoutes);
 app.use('/farmer', farmerRoutes);
-//app.use('/distributor', distributorRoutes);
-//app.use('/nodal-agency', nodalAgencyRoutes);
+app.use('/distributor', distributorRoutes);
+app.use('/nodal-agency', nodalAgencyRoutes);
+
 app.get('/:role/register', (req, res) => {
   const { role } = req.params;
   if (role === 'farmer' || role === 'distributor' || role === 'nodal-agency') {
@@ -57,6 +70,8 @@ app.get('/:role/register', (req, res) => {
     res.redirect('/register');
   }
 });
+
+
 
 // start server
 app.listen(process.env.PORT || 3000, () => {

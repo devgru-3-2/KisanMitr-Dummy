@@ -3,6 +3,79 @@
 <head>
   <meta charset="utf-8">
   <title>Distributor Dashboard</title>
+  <style>
+    body {
+  font-family: Arial, sans-serif;
+  background-color: #f2f2f2;
+}
+
+h1 {
+  color: #333;
+  margin: 20px 0;
+}
+
+h2 {
+  color: #666;
+  margin: 20px 0;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+form {
+  margin-top: 20px;
+}
+
+button[type="submit"] {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button[type="submit"]:hover {
+  background-color: #3e8e41;
+}
+
+select {
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  background-color: #fff;
+  margin-right: 10px;
+}
+
+label {
+  font-size: 16px;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+input[type="hidden"] {
+  display: none;
+}
+
+  </style>
 </head>
 <body>
   <h1>Welcome, <%= distributor.name %>!</h1>
@@ -40,6 +113,28 @@
       <% }); %>
     </tbody>
   </table>
+  <h2>Your Procurements</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Product Name</th>
+      <th>Nodal Agency</th>
+      <th>Quantity</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% procurements.forEach(function(procurement) { %>
+      <tr>
+        <td><%= procurement.product.name %></td>
+        <td><%= procurement.nodalAgency.name %></td>
+        <td><%= procurement.quantity %></td>
+        <td><%= procurement.date.toDateString() %></td>
+      </tr>
+    <% }); %>
+  </tbody>
+</table>
+
   <h2>Farmer List</h2>
   <table>
     <thead>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Nodal Agency Dashboard</title>
+  <style>
+    /* reset default browser styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* style the navigation bar */
+nav {
+  background-color: #f2f2f2;
+  padding: 10px;
+}
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: space-around;
+}
+
+nav li {
+  margin: 0;
+  padding: 0;
+}
+
+nav a {
+  display: block;
+  padding: 10px;
+  color: #333;
+  text-decoration: none;
+}
+
+nav a:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+/* style the headings */
+h1, h2 {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+/* style the forms */
+form {
+  text-align: center;
+  margin-top: 10px;
+}
+
+form label {
+  display: inline-block;
+  width: 120px;
+  text-align: right;
+  margin-right: 10px;
+}
+
+form input[type="text"] {
+  width: 200px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+form button[type="submit"] {
+  background-color: #333;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* style the table */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 20px;
+}
+
+table th {
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  padding: 10px;
+}
+
+table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+/* style the unordered list */
+ul {
+  margin-top: 20px;
+  list-style-type: none;
+}
+
+ul li {
+  margin-bottom: 20px;
+}
+
+ul li h3 {
+  margin-bottom: 10px;
+}
+
+ul li ul {
+  margin-left: 20px;
+}
+
+ul li ul li {
+  margin-bottom: 10px;
+}
+
+/* style the select element */
+select {
+  width: 200px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="/nodal-agency/procurements">Log Procurement</a></li>
+      <li><a href="/nodal-agency/all-procurements">All Procurements</a></li>
+      <li><a href="/nodal-agency/get-zipcode-data">Get Zipcode Data</a></li>
+      <li><a href="/nodal-agency/products-by-distributor">Products by Distributor</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </nav>
+
+  <h1>Nodal Agency Dashboard</h1>
+  <h2>Log Procurement</h2>
+  <form action="/nodal-agency/procurements" method="POST">
+    <label for="distributorPhone">Distributor Phone:</label>
+    <input type="text" id="distributorPhone" name="distributorPhone" required><br><br>
+    <label for="procurementDetails">Procurement Details:</label>
+    <input type="text" id="procurementDetails" name="procurementDetails" required><br><br>
+    <button type="submit">Log Procurement</button>
+  </form>
+  <h2>All Procurements</h2>
+  <table>
+    <tr>
+      <th>Distributor</th>
+      <th>Details</th>
+      <th>Created At</th>
+    </tr>
+    <% procurements.forEach((procurement) => { %>
+      <tr>
+        <td><%= procurement.distributor.name %></td>
+        <td><%= procurement.details %></td>
+        <td><%= new Date(procurement.createdAt).toLocaleString() %></td>
+      </tr>
+    <% }) %>
+  </table>
+
+
+  <h2>Get Zipcode Data</h2>
+  <form action="/nodal-agency/zipcodes" method="GET">
+    <label for="zipcode">Zipcode:</label>
+    <input type="text" id="zipcode" name="zipcode" required><br><br>
+    <button type="submit">Get Data</button>
+  </form>
+
+  <h2>Zipcode Data</h2>
+<ul>
+  <% Object.keys(data).forEach((id) => { %>
+    <% const item = data[id]; %>
+    <li>
+      <% if (item.type === 'distributor') { %>
+        Distributor: <%= item.name %><br>
+        Procurements:
+        <ul>
+          <% item.procurements.forEach((procurement) => { %>
+            <li><%= procurement.details %></li>
+          <% }) %>
+        </ul>
+        Distributions:
+        <ul>
+          <% item.distributions.forEach((distribution) => { %>
+            <li>Product: <%= distribution.product.name %>, Quantity: <%= distribution.quantity %>, Farmer: <%= distribution.farmer.name %></li>
+          <% }) %>
+        </ul>
+      <% } else if (item.type === 'farmer') { %>
+        Farmer: <%= item.name %><br>
+        Products:
+        <ul>
+          <% item.products.forEach((product) => { %>
+            <li><%= product.name %>, Price: <%= product.price %></li>
+          <% }) %>
+        </ul>
+        Distributions:
+        <ul>
+          <% item.distributions.forEach((distribution) => { %>
+            <li>Product: <%= distribution.product.name %>, Quantity: <%= distribution.quantity %>, Distributor: <%= distribution.distributor.name %></li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </li>
+  <% }) %>
+</ul>
+
+
+<h2>Products by Distributor</h2>
+<form action="/nodal-agency/products" method="GET">
+  <label for="distributor">Select a distributor:</label>
+  <select id=="distributor" name="distributor" required>
+    <% distributors.forEach((distributor) => { %>
+    <option value="<%= distributor.id %>"><%= distributor.name %></option>
+    <% }) %>
+    </select>
+    <button type="submit">Get Products</button>
+    
+  </form>
+  <h2>Products</h2>
+    <ul>
+      <% products.forEach((product) => { %>
+        <li><%= product.name %>, Price: <%= product.price %>, Distributor: <%= product.distributor.name %></li>
+      <% }) %>
+    </ul>
+  </body>
+</html>
